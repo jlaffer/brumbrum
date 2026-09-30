@@ -1,9 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { User, Reservation } from '../entities/entities.js';
+import * as nodemailer from 'nodemailer';
+import { mailConfig } from '../config/mail.config.js';
 
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
+  private transporter: nodemailer.Transporter;
+
+  constructor() {
+    this.transporter = nodemailer.createTransport({
+      host: mailConfig.host,
+      port: mailConfig.port,
+      secure: mailConfig.secure,
+      auth: {
+        user: mailConfig.auth.user,
+        pass: mailConfig.auth.pass,
+      },
+    });
+  }
 
   async notifyNewReservation(reservation: Reservation) {
     const owner = reservation.car.owner;
@@ -56,9 +71,20 @@ export class NotificationService {
     }
   }
 
-  private sendEmail(to: string, subject: string, body: string) {
-    // MOCK: In einer echten Umgebung würde hier Nodemailer o.ä. verwendet werden
-    this.logger.log(`[EMAIL MOCK] To: ${to} | Subject: ${subject} | Body: ${body}`);
+  private async sendEmail(to: string, subject: string, body: string) {
+    try {
+      this.logger.log(`Versende E-Mail an ${to} mit Betreff: ${subject}...`);
+      await this.transporter.sendMail({
+        from: mailConfig.from,
+        to,
+        subject,
+        text: body,
+      });
+      this.logger.log(`E-Mail erfolgreich an ${to} versendet.`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Fehler beim Versenden der E-Mail an ${to}: ${errorMessage}`);
+    }
   }
 
   private async sendWhatsApp(to: string, body: string, apikey: string) {
