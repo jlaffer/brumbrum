@@ -163,9 +163,8 @@ if (saved) currentUserId.value = parseInt(saved);
   text-align: center;
   padding: 16px 0;
   font-size: 32px;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Fascinate', cursive;
   letter-spacing: 3px;
-  border-bottom: 2px solid #1890ff;
   text-transform: uppercase;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
