@@ -65,7 +65,7 @@ const onClose = () => {
   <a-config-provider
     :theme="{
       token: {
-        colorPrimary: '#337a19',
+        colorPrimary: '#275b14',
       },
     }"
   >
@@ -175,7 +175,7 @@ const onClose = () => {
 }
 .top-title-bar {
   //background: linear-gradient(90deg, #001529 0%, #002140 50%, #001529 100%);
-  background-color: #337a19;
+  background-color: #275b14;
   color: white;
   text-align: center;
   padding: 16px 0;
