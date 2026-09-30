@@ -13,6 +13,7 @@ const formState = ref({
   name: '',
   email: '',
   phoneNumber: '',
+  whatsappApiKey: '',
   color: '#1890ff'
 });
 
@@ -42,11 +43,12 @@ const showModal = (user?: User) => {
       name: user.name,
       email: user.email,
       phoneNumber: user.phoneNumber || '',
+      whatsappApiKey: user.whatsappApiKey || '',
       color: user.color 
     };
   } else {
     editingUser.value = null;
-    formState.value = { name: '', email: '', phoneNumber: '', color: '#1890ff' };
+    formState.value = { name: '', email: '', phoneNumber: '', whatsappApiKey: '', color: '#1890ff' };
   }
   modalVisible.value = true;
 };
@@ -140,6 +142,10 @@ onUnmounted(() => {
         </a-form-item>
         <a-form-item label="Telefon (für WhatsApp)">
           <a-input v-model:value="formState.phoneNumber" placeholder="+49 123 456789" />
+        </a-form-item>
+        <a-form-item label="CallMeBot API Key">
+          <a-input v-model:value="formState.whatsappApiKey" placeholder="Dein API Key von CallMeBot" />
+          <small style="color: #888">Sende "I allow callmebot to send me messages" an +34 644 20 47 85 um einen Key zu erhalten.</small>
         </a-form-item>
         <a-form-item label="Farbe">
           <div style="display: flex; align-items: center; gap: 8px;">

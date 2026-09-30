@@ -19,6 +19,10 @@ Zentrales Modell in `backend/src/entities/entities.ts`:
 - Das Backend bietet einen Endpunkt `/calendar/ics`, der alle aktiven Reservierungen im Standard-ICS-Format exportiert.
 - Der Link kann in externe Kalender-Apps (Google, Outlook) eingebunden werden.
 
+## Benachrichtigungen
+- **NotificationService:** Triggert automatische Benachrichtigungen bei neuen Anfragen, Änderungen oder Bestätigungen.
+- **Kanäle:** Unterstützt E-Mail und WhatsApp (aktuell als Mock implementiert).
+
 ## Wichtige Logik-Punkte
 - **Reservierungs-Status:** Wenn eine Reservierung bearbeitet wird, wird ihr Status automatisch auf `PENDING` zurückgesetzt, damit der Besitzer sie erneut bestätigen muss.
 - **Kilometerstand:** Nach Abschluss einer Fahrt (`COMPLETED`) wird der Kilometerstand des Fahrzeugs automatisch im Backend aktualisiert.

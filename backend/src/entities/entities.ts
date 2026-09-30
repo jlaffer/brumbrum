@@ -20,7 +20,10 @@ export class User {
 
   @Column({ nullable: true })
   phoneNumber: string;
-
+ 
+  @Column({ nullable: true })
+  whatsappApiKey: string;
+ 
   @Column({ default: '#1890ff' })
   color: string;
 

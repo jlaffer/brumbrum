@@ -55,6 +55,9 @@ if (saved) currentUserId.value = parseInt(saved);
 
 <template>
   <a-layout style="min-height: 100vh">
+    <div class="top-title-bar">
+      Brausen am Berliner Ring
+    </div>
     <a-layout-header class="header">
       <div class="logo">
         <img src="../public/brumbrum.png" width="110" alt="BrumBrum Logo" />
@@ -154,6 +157,18 @@ if (saved) currentUserId.value = parseInt(saved);
   justify-content: space-between;
   padding: 0 24px;
 }
+.top-title-bar {
+  background: linear-gradient(90deg, #001529 0%, #002140 50%, #001529 100%);
+  color: white;
+  text-align: center;
+  padding: 16px 0;
+  font-size: 32px;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 3px;
+  border-bottom: 2px solid #1890ff;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
 .logo {
   color: white;
   font-weight: bold;
@@ -182,6 +197,11 @@ if (saved) currentUserId.value = parseInt(saved);
 }
 
 @media (max-width: 768px) {
+  .top-title-bar {
+    font-size: 24px;
+    padding: 10px 0;
+    letter-spacing: 2px;
+  }
   .desktop-menu {
     display: none;
   }

@@ -10,7 +10,8 @@ BrumBrum ist eine private Carsharing-Plattform für Nachbarn. Sie ermöglicht di
 - **Frontend:** Vue.js 3 (Composition API, TypeScript), Vite.
 - **UI-Library:** Ant Design Vue (antdv).
 - **Kommunikation:** REST API & WebSockets (Socket.io) für Echtzeit-Updates.
-- **Kalender-Export:** iCalendar (.ics) Format via `ics` Bibliothek.
+  - **Kalender-Export:** iCalendar (.ics) Format via `ics` Bibliothek.
+- **WhatsApp-Benachrichtigungen:** Via CallMeBot API.
 
 ## Projektstruktur
 - `/backend`: Nest.js Anwendung.
@@ -33,6 +34,7 @@ BrumBrum ist eine private Carsharing-Plattform für Nachbarn. Sie ermöglicht di
 - **Sprache:** Kommentare und Dokumentation (KDoc/JSDoc) sollten in der Sprache des Nutzers oder auf Englisch verfasst sein, passend zum Kontext.
 - **Fehlerbehandlung:** Implementiere defensive Programmierung (z.B. Optional Chaining im Frontend).
 - **Echtzeit:** Bei Änderungen an Daten im Backend muss die `AppGateway` Methode zur Benachrichtigung (`notify...`) aufgerufen werden.
+- **Benachrichtigungen:** Benachrichtigungen erfolgen über den `NotificationService` (E-Mail und WhatsApp via CallMeBot). Nutzer müssen ihren CallMeBot API-Key in den Einstellungen hinterlegen.
 - **Responsivität:** Alle UI-Änderungen müssen mobilfreundlich sein (Ant Design Grid, Media Queries).
 
 ## Dokumentation

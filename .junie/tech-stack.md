@@ -9,6 +9,7 @@
   - ESM (EcmaScript Modules) Konfiguration (`"type": "module"`).
   - Imports benötigen im Backend oft die `.js` Endung.
   - Generierung von `.ics` Dateien mit der `ics` Bibliothek.
+  - Benachrichtigungs-System (E-Mail/WhatsApp) als Mock integriert.
 
 ## Frontend (Vue.js)
 - **Framework:** Vue 3 (Composition API)
