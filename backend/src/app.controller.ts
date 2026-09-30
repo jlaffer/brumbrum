@@ -36,6 +36,11 @@ export class AppController {
     return this.appService.createCar(data);
   }
 
+  @Patch('cars/:id')
+  updateCar(@Param('id') id: string, @Body() data: any) {
+    return this.appService.updateCar(+id, data);
+  }
+
   @Get('reservations')
   getReservations() {
     return this.appService.getReservations();

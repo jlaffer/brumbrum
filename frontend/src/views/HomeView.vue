@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { getCars, getReservations, createReservation, socket } from '../api/index';
 import type { Car, Reservation } from '../types/index';
 import { message } from 'ant-design-vue';
@@ -37,6 +37,8 @@ const fetchData = async () => {
     loading.value = false;
   }
 };
+
+const activeCars = computed(() => cars.value.filter(c => c.isActive));
 
 onMounted(() => {
   fetchData();
@@ -99,7 +101,7 @@ const handleOk = async () => {
     </div>
 
     <div v-if="viewMode === 'list'">
-      <a-list :grid="{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }" :data-source="cars" :loading="loading">
+      <a-list :grid="{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }" :data-source="activeCars" :loading="loading">
         <template #renderItem="{ item }">
           <a-list-item style="padding: 0">
             <a-card :title="item.brand + ' ' + item.model" hoverable>

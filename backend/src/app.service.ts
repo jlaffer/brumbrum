@@ -47,9 +47,27 @@ export class AppService {
   }
 
   async createCar(data: any) {
-    const owner = await this.userRepository.findOneBy({ id: data.ownerId });
+    const { ownerId, ...rest } = data;
+    const owner = await this.userRepository.findOneBy({ id: ownerId });
     if (!owner) throw new Error('Owner not found');
-    const car = this.carRepository.create({ ...data, owner });
+    const car = this.carRepository.create({ ...rest, owner });
+    const saved = await this.carRepository.save(car);
+    this.appGateway.notifyCarUpdate();
+    return saved;
+  }
+
+  async updateCar(id: number, data: any) {
+    const { ownerId, ...rest } = data;
+    const car = await this.carRepository.findOne({ where: { id }, relations: { owner: true } });
+    if (!car) throw new Error('Car not found');
+
+    if (ownerId !== undefined) {
+      const owner = await this.userRepository.findOneBy({ id: ownerId });
+      if (!owner) throw new Error('Owner not found');
+      car.owner = owner;
+    }
+
+    Object.assign(car, rest);
     const saved = await this.carRepository.save(car);
     this.appGateway.notifyCarUpdate();
     return saved;

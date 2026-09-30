@@ -51,6 +51,9 @@ export class Car {
   @Column('float', { default: 0 })
   currentMileage: number;
 
+  @Column({ default: true })
+  isActive: boolean;
+
   @ManyToOne(() => User, (user) => user.cars)
   owner: User;
 

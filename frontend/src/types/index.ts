@@ -13,6 +13,7 @@ export interface Car {
   model: string;
   licensePlate: string;
   currentMileage: number;
+  isActive: boolean;
   owner: User;
 }
 

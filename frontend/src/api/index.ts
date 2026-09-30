@@ -11,6 +11,7 @@ export const socket = io(API_URL);
 
 export const getCars = () => api.get('/cars').then(res => res.data);
 export const createCar = (data: any) => api.post('/cars', data).then(res => res.data);
+export const updateCar = (id: number, data: any) => api.patch(`/cars/${id}`, data).then(res => res.data);
 export const getReservations = () => api.get('/reservations').then(res => res.data);
 export const createReservation = (data: any) => api.post('/reservations', data).then(res => res.data);
 export const updateReservation = (id: number, data: any) => api.patch(`/reservations/${id}`, data).then(res => res.data);
