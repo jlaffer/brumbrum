@@ -17,8 +17,20 @@ const fetchUsers = async () => {
     await createUser({ name: 'Nachbar B', email: 'b@example.com', color: '#52c41a' });
     users.value = await getUsers();
   }
-  if (!currentUserId.value && users.value.length > 0) {
+  
+  // Validierung des gespeicherten Benutzers
+  const saved = localStorage.getItem('brumbrum_user_id');
+  if (saved) {
+    const parsedId = parseInt(saved);
+    if (users.value.some(u => u.id === parsedId)) {
+      currentUserId.value = parsedId;
+    } else if (users.value.length > 0) {
+      currentUserId.value = users.value[0].id;
+      localStorage.setItem('brumbrum_user_id', currentUserId.value.toString());
+    }
+  } else if (users.value.length > 0) {
     currentUserId.value = users.value[0].id;
+    localStorage.setItem('brumbrum_user_id', currentUserId.value.toString());
   }
 };
 
@@ -46,10 +58,6 @@ const copyIcsUrl = () => {
 const onClose = () => {
   drawerVisible.value = false;
 };
-
-// Lade gespeicherten Benutzer
-const saved = localStorage.getItem('brumbrum_user_id');
-if (saved) currentUserId.value = parseInt(saved);
 
 </script>
 

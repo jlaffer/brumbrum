@@ -53,19 +53,19 @@ onUnmounted(() => {
   socket.off('userUpdate', fetchData);
 });
 
-const myCars = computed(() => 
+const myCars = computed(() =>
   cars.value.filter(c => c.owner?.id === props.currentUserId)
 );
 
 const showAddModal = () => {
   editingCarId.value = null;
-  carForm.value = { 
-    brand: '', 
-    model: '', 
-    licensePlate: '', 
-    currentMileage: 0, 
+  carForm.value = {
+    brand: '',
+    model: '',
+    licensePlate: '',
+    currentMileage: 0,
     isActive: true,
-    ownerId: props.currentUserId 
+    ownerId: props.currentUserId
   };
   isModalVisible.value = true;
 };
@@ -85,7 +85,7 @@ const showEditModal = (car: Car) => {
 
 const handleOk = async () => {
   if (!props.currentUserId) return;
-  
+
   try {
     if (editingCarId.value) {
       await updateCar(editingCarId.value, carForm.value);
@@ -135,7 +135,7 @@ const columns = [
         </template>
       </a-table>
     </div>
-    
+
     <div v-else>
       <a-list :dataSource="myCars" :loading="loading">
         <template #renderItem="{ item }">
@@ -159,7 +159,17 @@ const columns = [
 
     <a-modal v-model:open="isModalVisible" :title="editingCarId ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug hinzufügen'" @ok="handleOk">
       <a-form layout="vertical">
-        <a-form-item label="Marke">
+        <a-form-item label="Besitzer">
+          <a-select v-model:value="carForm.ownerId" placeholder="Besitzer auswählen">
+            <a-select-option v-for="user in users" :key="user.id" :value="user.id">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: user.color }"></div>
+                {{ user.name }}
+              </div>
+            </a-select-option>
+          </a-select>
+
+          <a-form-item label="Marke">
           <a-input v-model:value="carForm.brand" placeholder="z.B. VW" />
         </a-form-item>
         <a-form-item label="Modell">
@@ -175,15 +185,6 @@ const columns = [
           <a-switch v-model:checked="carForm.isActive" />
           <span style="margin-left: 8px">{{ carForm.isActive ? 'Dieses Fahrzeug wird anderen angezeigt' : 'Dieses Fahrzeug ist aktuell nicht verfügbar' }}</span>
         </a-form-item>
-        <a-form-item label="Besitzer">
-          <a-select v-model:value="carForm.ownerId" placeholder="Besitzer auswählen">
-            <a-select-option v-for="user in users" :key="user.id" :value="user.id">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: user.color }"></div>
-                {{ user.name }}
-              </div>
-            </a-select-option>
-          </a-select>
         </a-form-item>
       </a-form>
     </a-modal>
