@@ -134,7 +134,10 @@ const handleDelete = (id: number) => {
 };
 
 const myReservations = computed(() =>
-  reservations.value.filter(r => r.user?.id === props.currentUserId)
+  reservations.value.filter(r => 
+    r.user?.id === props.currentUserId || 
+    r.car?.owner?.id === props.currentUserId
+  )
 );
 
 const futureReservations = computed(() =>
@@ -162,12 +165,10 @@ const getListData = (value: Dayjs) => {
   }));
 };
 
-const incomingReservations = computed(() =>
-  reservations.value.filter(r => r.car?.owner?.id === props.currentUserId && r.status === ReservationStatus.PENDING)
-);
 
 const columns = [
   { title: 'Fahrzeug', dataIndex: ['car', 'brand'], key: 'car' },
+  { title: 'Nutzer', key: 'user' },
   { title: 'Von', dataIndex: 'startTime', key: 'start' },
   { title: 'Bis', dataIndex: 'endTime', key: 'end' },
   { title: 'Status', dataIndex: 'status', key: 'status' },
@@ -195,7 +196,17 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
           <a-table :dataSource="group.data" :columns="columns" :loading="loading" rowKey="id">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'car'">
-                {{ record.car?.brand }} {{ record.car?.model }} ({{ record.car?.licensePlate }})
+                <div>{{ record.car?.brand }} {{ record.car?.model }} ({{ record.car?.licensePlate }})</div>
+                <a-tag v-if="record.car?.owner?.id === currentUserId" size="small" style="margin-top: 4px">Mein Auto</a-tag>
+                <a-tag v-else size="small" :color="record.car?.owner?.color" style="margin-top: 4px">
+                  Besitzer: {{ record.car?.owner?.name }}
+                </a-tag>
+              </template>
+              <template v-else-if="column.key === 'user'">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: record.user?.color }"></div>
+                  {{ record.user?.name }}
+                </div>
               </template>
               <template v-else-if="column.key === 'start'">
                 {{ formatDate(record.startTime) }}
@@ -210,28 +221,37 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
               </template>
               <template v-else-if="column.key === 'action'">
                 <a-space>
-                  <a-button
-                    v-if="record.status === 'APPROVED' && dayjs().isAfter(dayjs(record.startTime))"
-                    type="primary"
-                    size="small"
-                    @click="openMileageModal(record)"
-                  >
-                    Fahrt beenden
-                  </a-button>
-                  <a-button
-                    v-if="record.status === 'PENDING' || record.status === 'APPROVED'"
-                    size="small"
-                    @click="openEditModal(record)"
-                  >
-                    <template #icon><EditOutlined /></template>
-                  </a-button>
-                  <a-button
-                    danger
-                    size="small"
-                    @click="handleDelete(record.id)"
-                  >
-                    <template #icon><DeleteOutlined /></template>
-                  </a-button>
+                  <!-- Aktionen für den Buchenden -->
+                  <template v-if="record.user?.id === currentUserId">
+                    <a-button
+                      v-if="record.status === 'APPROVED' && dayjs().isAfter(dayjs(record.startTime))"
+                      type="primary"
+                      size="small"
+                      @click="openMileageModal(record)"
+                    >
+                      Fahrt beenden
+                    </a-button>
+                    <a-button
+                      v-if="record.status === 'PENDING' || record.status === 'APPROVED'"
+                      size="small"
+                      @click="openEditModal(record)"
+                    >
+                      <template #icon><EditOutlined /></template>
+                    </a-button>
+                    <a-button
+                      danger
+                      size="small"
+                      @click="handleDelete(record.id)"
+                    >
+                      <template #icon><DeleteOutlined /></template>
+                    </a-button>
+                  </template>
+
+                  <!-- Aktionen für den Autobesitzer -->
+                  <template v-if="record.car?.owner?.id === currentUserId && record.status === 'PENDING'">
+                    <a-button type="primary" size="small" @click="handleStatus(record.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
+                    <a-button danger size="small" @click="handleStatus(record.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
+                  </template>
                 </a-space>
               </template>
             </template>
@@ -252,32 +272,48 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
                       {{ item.status }}
                     </a-tag>
                   </template>
+                  <p>
+                    <strong>Nutzer:</strong> {{ item.user?.name }}
+                    <a-tag v-if="item.car?.owner?.id === currentUserId" size="small" style="margin-left: 4px">Mein Auto</a-tag>
+                    <a-tag v-else size="small" :color="item.car?.owner?.color" style="margin-left: 4px">
+                      Besitzer: {{ item.car?.owner?.name }}
+                    </a-tag>
+                  </p>
                   <p><strong>Zeitraum:</strong> {{ formatDate(item.startTime) }} - {{ formatDate(item.endTime) }}</p>
                   <a-space direction="vertical" style="width: 100%">
-                    <a-button
-                      v-if="item.status === 'APPROVED' && dayjs().isAfter(dayjs(item.startTime))"
-                      type="primary"
-                      block
-                      @click="openMileageModal(item)"
-                    >
-                      Fahrt beenden
-                    </a-button>
-                    <a-button
-                      v-if="item.status === 'PENDING' || item.status === 'APPROVED'"
-                      block
-                      @click="openEditModal(item)"
-                    >
-                      <template #icon><EditOutlined /></template>
-                      Bearbeiten
-                    </a-button>
-                    <a-button
-                      danger
-                      block
-                      @click="handleDelete(item.id)"
-                    >
-                      <template #icon><DeleteOutlined /></template>
-                      Löschen
-                    </a-button>
+                    <!-- Aktionen für den Buchenden -->
+                    <template v-if="item.user?.id === currentUserId">
+                      <a-button
+                        v-if="item.status === 'APPROVED' && dayjs().isAfter(dayjs(item.startTime))"
+                        type="primary"
+                        block
+                        @click="openMileageModal(item)"
+                      >
+                        Fahrt beenden
+                      </a-button>
+                      <a-button
+                        v-if="item.status === 'PENDING' || item.status === 'APPROVED'"
+                        block
+                        @click="openEditModal(item)"
+                      >
+                        <template #icon><EditOutlined /></template>
+                        Bearbeiten
+                      </a-button>
+                      <a-button
+                        danger
+                        block
+                        @click="handleDelete(item.id)"
+                      >
+                        <template #icon><DeleteOutlined /></template>
+                        Löschen
+                      </a-button>
+                    </template>
+
+                    <!-- Aktionen für den Autobesitzer -->
+                    <template v-if="item.car?.owner?.id === currentUserId && item.status === 'PENDING'">
+                      <a-button type="primary" block @click="handleStatus(item.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
+                      <a-button danger block @click="handleStatus(item.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
+                    </template>
                   </a-space>
                 </a-card>
               </a-list-item>
@@ -311,21 +347,6 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
       </a-calendar>
     </div>
 
-    <h2 style="margin-top: 24px">Eingehende Anfragen (als Besitzer)</h2>
-    <a-list :dataSource="incomingReservations" :loading="loading">
-      <template #renderItem="{ item }">
-        <a-list-item>
-          <a-list-item-meta
-            :title="item.user.name + ' möchte dein Auto (' + item.car.brand + ') leihen'"
-            :description="formatDate(item.startTime) + ' - ' + formatDate(item.endTime)"
-          />
-          <template #actions>
-            <a-button type="primary" @click="handleStatus(item.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
-            <a-button danger @click="handleStatus(item.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
-          </template>
-        </a-list-item>
-      </template>
-    </a-list>
 
     <a-modal v-model:open="mileageModalVisible" title="Kilometerstand eintragen" @ok="handleComplete">
       <p>Bitte trage den aktuellen Kilometerstand nach deiner Fahrt ein.</p>
