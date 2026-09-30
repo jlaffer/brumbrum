@@ -54,12 +54,15 @@ onUnmounted(() => {
 });
 
 const getListData = (value: Dayjs) => {
-  return reservations.value.filter(res => 
-    dayjs(res.startTime).isSame(value, 'day') && res.status !== 'REJECTED'
-  ).map(res => ({
+  return reservations.value.filter(res => {
+    const day = value.startOf('day');
+    const start = dayjs(res.startTime).startOf('day');
+    const end = dayjs(res.endTime).startOf('day');
+    return !day.isBefore(start) && !day.isAfter(end) && res.status !== 'REJECTED';
+  }).map(res => ({
     color: res.user?.color || '#1890ff',
     status: res.status,
-    content: `${res.user?.name || '?'}: ${res.car?.brand || 'Auto'}`,
+    content: `${res.car?.licensePlate} reserviert`,
   }));
 };
 

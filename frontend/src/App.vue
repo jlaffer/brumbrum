@@ -17,7 +17,7 @@ const fetchUsers = async () => {
     await createUser({ name: 'Nachbar B', email: 'b@example.com', color: '#52c41a' });
     users.value = await getUsers();
   }
-  
+
   // Validierung des gespeicherten Benutzers
   const saved = localStorage.getItem('brumbrum_user_id');
   if (saved) {
@@ -62,7 +62,14 @@ const onClose = () => {
 </script>
 
 <template>
-  <a-layout style="min-height: 100vh">
+  <a-config-provider
+    :theme="{
+      token: {
+        colorPrimary: '#337a19',
+      },
+    }"
+  >
+    <a-layout style="min-height: 100vh">
     <div class="top-title-bar">
       Brausen am Berliner Ring
     </div>
@@ -155,7 +162,8 @@ const onClose = () => {
     <a-layout-footer style="text-align: center">
       BrumBrum Carsharing ©2026
     </a-layout-footer>
-  </a-layout>
+    </a-layout>
+  </a-config-provider>
 </template>
 
 <style scoped>
@@ -166,7 +174,8 @@ const onClose = () => {
   padding: 0 24px;
 }
 .top-title-bar {
-  background: linear-gradient(90deg, #001529 0%, #002140 50%, #001529 100%);
+  //background: linear-gradient(90deg, #001529 0%, #002140 50%, #001529 100%);
+  background-color: #337a19;
   color: white;
   text-align: center;
   padding: 16px 0;
