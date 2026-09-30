@@ -18,6 +18,9 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  @Column({ nullable: true })
+  phoneNumber: string;
+
   @Column({ default: '#1890ff' })
   color: string;
 

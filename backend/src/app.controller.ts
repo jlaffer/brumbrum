@@ -61,6 +61,11 @@ export class AppController {
     return this.appService.completeReservation(+id, endMileage);
   }
 
+  @Delete('reservations/:id')
+  deleteReservation(@Param('id') id: string) {
+    return this.appService.deleteReservation(+id);
+  }
+
   @Get('calendar/ics')
   @Header('Content-Type', 'text/calendar')
   @Header('Content-Disposition', 'attachment; filename="brumbrum.ics"')

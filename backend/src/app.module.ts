@@ -4,6 +4,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { User, Car, Reservation } from './entities/entities.js';
 import { AppGateway } from './gateways/app.gateway.js';
+import { NotificationService } from './notifications/notification.service.js';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { AppGateway } from './gateways/app.gateway.js';
     TypeOrmModule.forFeature([User, Car, Reservation]),
   ],
   controllers: [AppController],
-  providers: [AppService, AppGateway],
+  providers: [AppService, AppGateway, NotificationService],
 })
 export class AppModule {}

@@ -15,6 +15,7 @@ export const getReservations = () => api.get('/reservations').then(res => res.da
 export const createReservation = (data: any) => api.post('/reservations', data).then(res => res.data);
 export const updateReservation = (id: number, data: any) => api.patch(`/reservations/${id}`, data).then(res => res.data);
 export const updateReservationStatus = (id: number, status: string) => api.patch(`/reservations/${id}/status`, { status }).then(res => res.data);
+export const deleteReservation = (id: number) => api.delete(`/reservations/${id}`).then(res => res.data);
 export const completeReservation = (id: number, endMileage: number) => api.patch(`/reservations/${id}/complete`, { endMileage }).then(res => res.data);
 export const getUsers = () => api.get('/users').then(res => res.data);
 export const createUser = (data: any) => api.post('/users', data).then(res => res.data);

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { User, Car, Reservation, ReservationStatus } from './entities/entities.js';
 import { AppGateway } from './gateways/app.gateway.js';
+import { NotificationService } from './notifications/notification.service.js';
 import * as ics from 'ics';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class AppService {
     @InjectRepository(Reservation)
     private reservationRepository: Repository<Reservation>,
     private appGateway: AppGateway,
+    private notificationService: NotificationService,
   ) {}
 
   async getUsers() {
@@ -78,6 +80,16 @@ export class AppService {
     });
     const saved = await this.reservationRepository.save(reservation);
     this.appGateway.notifyReservationUpdate();
+
+    const fullReservation = await this.reservationRepository.findOne({
+      where: { id: saved.id },
+      relations: { user: true, car: { owner: true } }
+    });
+
+    if (fullReservation) {
+      this.notificationService.notifyNewReservation(fullReservation);
+    }
+    
     return saved;
   }
 
@@ -100,25 +112,38 @@ export class AppService {
 
     const saved = await this.reservationRepository.save(reservation);
     this.appGateway.notifyReservationUpdate();
-    return this.reservationRepository.findOne({
+
+    const fullReservation = await this.reservationRepository.findOne({
       where: { id: saved.id },
       relations: { 
         user: true, 
         car: { owner: true } 
       }
     });
+
+    if (fullReservation) {
+      this.notificationService.notifyReservationChanged(fullReservation);
+    }
+
+    return fullReservation;
   }
 
   async updateReservationStatus(id: number, status: ReservationStatus) {
     await this.reservationRepository.update(id, { status });
     this.appGateway.notifyReservationUpdate();
-    return this.reservationRepository.findOne({
+    const reservation = await this.reservationRepository.findOne({
       where: { id },
       relations: { 
         user: true, 
         car: { owner: true } 
       }
     });
+
+    if (reservation && status === ReservationStatus.APPROVED) {
+      this.notificationService.notifyReservationApproved(reservation);
+    }
+
+    return reservation;
   }
 
   async completeReservation(id: number, endMileage: number) {
@@ -143,6 +168,22 @@ export class AppService {
     
     this.appGateway.notifyReservationUpdate();
     return reservation;
+  }
+
+  async deleteReservation(id: number) {
+    const reservation = await this.reservationRepository.findOne({
+      where: { id },
+      relations: { user: true, car: { owner: true } }
+    });
+    
+    const result = await this.reservationRepository.delete(id);
+    this.appGateway.notifyReservationUpdate();
+    
+    if (reservation) {
+      this.notificationService.notifyReservationDeleted(reservation);
+    }
+    
+    return result;
   }
 
   async getCalendarIcs(): Promise<string> {

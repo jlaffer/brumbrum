@@ -12,12 +12,14 @@ const editingUser = ref<Partial<User> | null>(null);
 const formState = ref({
   name: '',
   email: '',
+  phoneNumber: '',
   color: '#1890ff'
 });
 
 const columns = [
   { title: 'Name', dataIndex: 'name', key: 'name' },
   { title: 'Email', dataIndex: 'email', key: 'email' },
+  { title: 'Telefon', dataIndex: 'phoneNumber', key: 'phoneNumber' },
   { title: 'Farbe', dataIndex: 'color', key: 'color' },
   { title: 'Aktion', key: 'action' },
 ];
@@ -36,10 +38,15 @@ const fetchUsers = async () => {
 const showModal = (user?: User) => {
   if (user) {
     editingUser.value = user;
-    formState.value = { ...user };
+    formState.value = { 
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber || '',
+      color: user.color 
+    };
   } else {
     editingUser.value = null;
-    formState.value = { name: '', email: '', color: '#1890ff' };
+    formState.value = { name: '', email: '', phoneNumber: '', color: '#1890ff' };
   }
   modalVisible.value = true;
 };
@@ -130,6 +137,9 @@ onUnmounted(() => {
         </a-form-item>
         <a-form-item label="Email" required>
           <a-input v-model:value="formState.email" placeholder="email@beispiel.de" />
+        </a-form-item>
+        <a-form-item label="Telefon (für WhatsApp)">
+          <a-input v-model:value="formState.phoneNumber" placeholder="+49 123 456789" />
         </a-form-item>
         <a-form-item label="Farbe">
           <div style="display: flex; align-items: center; gap: 8px;">

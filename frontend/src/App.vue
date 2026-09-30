@@ -34,7 +34,8 @@ const showDrawer = () => {
 };
 
 const copyIcsUrl = () => {
-  const url = `${window.location.protocol}//${window.location.hostname}:3000/calendar/ics`;
+  // const url = `${window.location.protocol}://${window.location.hostname}:${window.location.port}/calendar/ics`;
+  const url = `${window.location.protocol}://${window.location.hostname}:3000/calendar/ics`;
   navigator.clipboard.writeText(url).then(() => {
     message.success('Kalender-URL kopiert!');
   }).catch(() => {
@@ -80,9 +81,9 @@ if (saved) currentUserId.value = parseInt(saved);
       </a-menu>
 
       <div class="header-right">
-        <a-button 
-          ghost 
-          style="margin-right: 16px" 
+        <a-button
+          ghost
+          style="margin-right: 16px"
           @click="copyIcsUrl"
           title="Kalender-Link (ICS) kopieren"
         >
