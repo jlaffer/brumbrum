@@ -30,13 +30,18 @@ BrumBrum ist eine private Carsharing-Plattform für Nachbarn. Sie ermöglicht di
 | Build (BE/FE) | `npm run build` |
 
 ## Regeln für die KI
+Dieses Projekt folgt einer hierarchischen Struktur für KI-Anweisungen:
+1. **Global:** Allgemeine Projektregeln in dieser Datei (`AGENTS.md`).
+2. **Backend:** Spezifische Nest.js & ESM Regeln in `.junie/rules-backend.md`.
+3. **Frontend:** Spezifische Vue.js & UI Regeln in `.junie/rules-frontend.md`.
+
+### Allgemeine Regeln
 - **Code-Stil:** Halte dich strikt an die bestehende Struktur und Benennungskonventionen.
-- **Sprache:** Kommentare und Dokumentation (KDoc/JSDoc) sollten in der Sprache des Nutzers oder auf Englisch verfasst sein, passend zum Kontext.
-- **Fehlerbehandlung:** Implementiere defensive Programmierung (z.B. Optional Chaining im Frontend).
-- **Echtzeit:** Bei Änderungen an Daten im Backend muss die `AppGateway` Methode zur Benachrichtigung (`notify...`) aufgerufen werden.
-- **Benachrichtigungen:** Benachrichtigungen erfolgen über den `NotificationService` (E-Mail und WhatsApp via CallMeBot). Nutzer müssen ihren CallMeBot API-Key in den Einstellungen hinterlegen.
-- **Responsivität:** Alle UI-Änderungen müssen mobilfreundlich sein (Ant Design Grid, Media Queries).
+- **Sprache:** Kommentare und Dokumentation (KDoc/JSDoc) sollten in der Sprache des Nutzers oder auf Englisch verfasst sein.
+- **Benachrichtigungen:** Benachrichtigungen erfolgen über den `NotificationService`. Nutzer müssen ihren CallMeBot API-Key hinterlegen.
 
 ## Dokumentation
-- Siehe `.junie/tech-stack.md` für detaillierte Abhängigkeiten.
-- Siehe `.junie/architecture.md` für den Datenfluss.
+- [Tech Stack Details](tech-stack.md)
+- [Architektur & Datenfluss](architecture.md)
+- [Backend Richtlinien](rules-backend.md)
+- [Frontend Richtlinien](rules-frontend.md)

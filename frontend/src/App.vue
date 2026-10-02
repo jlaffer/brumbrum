@@ -71,7 +71,7 @@ const onClose = () => {
   >
     <a-layout style="min-height: 100vh">
     <div class="top-title-bar">
-      Brausen am Berliner Ring
+      BrumBrum am Berliner Ring
     </div>
     <a-layout-header class="header">
       <div class="logo">
@@ -174,7 +174,6 @@ const onClose = () => {
   padding: 0 24px;
 }
 .top-title-bar {
-  //background: linear-gradient(90deg, #001529 0%, #002140 50%, #001529 100%);
   background-color: #275b14;
   color: white;
   text-align: center;
