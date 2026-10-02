@@ -1,0 +1,250 @@
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Not } from 'typeorm';
+import { User, Car, Reservation, ReservationStatus } from './entities/entities.js';
+import { AppGateway } from './gateways/app.gateway.js';
+import { NotificationService } from './notifications/notification.service.js';
+import * as ics from 'ics';
+let AppService = class AppService {
+    userRepository;
+    carRepository;
+    reservationRepository;
+    appGateway;
+    notificationService;
+    constructor(userRepository, carRepository, reservationRepository, appGateway, notificationService) {
+        this.userRepository = userRepository;
+        this.carRepository = carRepository;
+        this.reservationRepository = reservationRepository;
+        this.appGateway = appGateway;
+        this.notificationService = notificationService;
+    }
+    async getUsers() {
+        return this.userRepository.find();
+    }
+    async createUser(data) {
+        const user = this.userRepository.create(data);
+        const saved = await this.userRepository.save(user);
+        this.appGateway.notifyUserUpdate();
+        return saved;
+    }
+    async updateUser(id, data) {
+        await this.userRepository.update(id, data);
+        this.appGateway.notifyUserUpdate();
+        return this.userRepository.findOneBy({ id });
+    }
+    async deleteUser(id) {
+        const result = await this.userRepository.delete(id);
+        this.appGateway.notifyUserUpdate();
+        return result;
+    }
+    async getCars() {
+        return this.carRepository.find({ relations: { owner: true } });
+    }
+    async createCar(data) {
+        const { ownerId, ...rest } = data;
+        const owner = await this.userRepository.findOneBy({ id: ownerId });
+        if (!owner)
+            throw new Error('Owner not found');
+        const car = this.carRepository.create({ ...rest, owner });
+        const saved = await this.carRepository.save(car);
+        this.appGateway.notifyCarUpdate();
+        return saved;
+    }
+    async updateCar(id, data) {
+        const { ownerId, ...rest } = data;
+        const car = await this.carRepository.findOne({ where: { id }, relations: { owner: true } });
+        if (!car)
+            throw new Error('Car not found');
+        if (ownerId !== undefined) {
+            const owner = await this.userRepository.findOneBy({ id: ownerId });
+            if (!owner)
+                throw new Error('Owner not found');
+            car.owner = owner;
+        }
+        Object.assign(car, rest);
+        const saved = await this.carRepository.save(car);
+        this.appGateway.notifyCarUpdate();
+        return saved;
+    }
+    async getReservations() {
+        return this.reservationRepository.find({
+            relations: {
+                user: true,
+                car: { owner: true }
+            }
+        });
+    }
+    async createReservation(data) {
+        const user = await this.userRepository.findOneBy({ id: data.userId });
+        const car = await this.carRepository.findOne({
+            where: { id: data.carId },
+            relations: { owner: true }
+        });
+        if (!user || !car)
+            throw new Error('User or Car not found');
+        const reservation = this.reservationRepository.create({
+            startTime: new Date(data.startTime),
+            endTime: new Date(data.endTime),
+            user,
+            car,
+        });
+        const saved = await this.reservationRepository.save(reservation);
+        this.appGateway.notifyReservationUpdate();
+        const fullReservation = await this.reservationRepository.findOne({
+            where: { id: saved.id },
+            relations: { user: true, car: { owner: true } }
+        });
+        if (fullReservation) {
+            this.notificationService.notifyNewReservation(fullReservation);
+        }
+        return saved;
+    }
+    async updateReservation(id, data) {
+        const reservation = await this.reservationRepository.findOne({
+            where: { id },
+            relations: { user: true, car: true }
+        });
+        if (!reservation)
+            throw new Error('Reservation not found');
+        if (data.startTime)
+            reservation.startTime = new Date(data.startTime);
+        if (data.endTime)
+            reservation.endTime = new Date(data.endTime);
+        if (data.carId) {
+            const car = await this.carRepository.findOneBy({ id: data.carId });
+            if (car)
+                reservation.car = car;
+        }
+        reservation.status = ReservationStatus.PENDING;
+        const saved = await this.reservationRepository.save(reservation);
+        this.appGateway.notifyReservationUpdate();
+        const fullReservation = await this.reservationRepository.findOne({
+            where: { id: saved.id },
+            relations: {
+                user: true,
+                car: { owner: true }
+            }
+        });
+        if (fullReservation) {
+            this.notificationService.notifyReservationChanged(fullReservation);
+        }
+        return fullReservation;
+    }
+    async updateReservationStatus(id, status) {
+        await this.reservationRepository.update(id, { status });
+        this.appGateway.notifyReservationUpdate();
+        const reservation = await this.reservationRepository.findOne({
+            where: { id },
+            relations: {
+                user: true,
+                car: { owner: true }
+            }
+        });
+        if (reservation && status === ReservationStatus.APPROVED) {
+            this.notificationService.notifyReservationApproved(reservation);
+        }
+        return reservation;
+    }
+    async completeReservation(id, endMileage) {
+        const reservation = await this.reservationRepository.findOne({
+            where: { id },
+            relations: {
+                user: true,
+                car: { owner: true }
+            },
+        });
+        if (!reservation)
+            throw new Error('Reservation not found');
+        reservation.status = ReservationStatus.COMPLETED;
+        reservation.endMileage = endMileage;
+        await this.reservationRepository.save(reservation);
+        if (reservation.car) {
+            reservation.car.currentMileage = endMileage;
+            await this.carRepository.save(reservation.car);
+            this.appGateway.notifyCarUpdate();
+        }
+        this.appGateway.notifyReservationUpdate();
+        return reservation;
+    }
+    async deleteReservation(id) {
+        const reservation = await this.reservationRepository.findOne({
+            where: { id },
+            relations: { user: true, car: { owner: true } }
+        });
+        const result = await this.reservationRepository.delete(id);
+        this.appGateway.notifyReservationUpdate();
+        if (reservation) {
+            this.notificationService.notifyReservationDeleted(reservation);
+        }
+        return result;
+    }
+    async getCalendarIcs() {
+        const reservations = await this.reservationRepository.find({
+            relations: { user: true, car: true },
+            where: { status: Not(ReservationStatus.REJECTED) }
+        });
+        const events = reservations.map(res => {
+            const start = new Date(res.startTime);
+            const end = new Date(res.endTime);
+            const startArray = [
+                start.getFullYear(),
+                start.getMonth() + 1,
+                start.getDate(),
+                start.getHours(),
+                start.getMinutes()
+            ];
+            const endArray = [
+                end.getFullYear(),
+                end.getMonth() + 1,
+                end.getDate(),
+                end.getHours(),
+                end.getMinutes()
+            ];
+            return {
+                start: startArray,
+                end: endArray,
+                title: `BrumBrum: ${res.car.brand} ${res.car.model} (${res.user.name})`,
+                description: `Reservierung für ${res.car.brand} ${res.car.model} von ${res.user.name}. Status: ${res.status}`,
+                location: res.car.licensePlate,
+                status: res.status === ReservationStatus.APPROVED ? 'CONFIRMED' : 'TENTATIVE',
+                busyStatus: 'BUSY'
+            };
+        });
+        if (events.length === 0) {
+            return 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BrumBrum//NONSGML v1.0//EN\r\nEND:VCALENDAR';
+        }
+        return new Promise((resolve, reject) => {
+            ics.createEvents(events, (error, value) => {
+                if (error) {
+                    return reject(error);
+                }
+                resolve(value);
+            });
+        });
+    }
+};
+AppService = __decorate([
+    Injectable(),
+    __param(0, InjectRepository(User)),
+    __param(1, InjectRepository(Car)),
+    __param(2, InjectRepository(Reservation)),
+    __metadata("design:paramtypes", [Repository,
+        Repository,
+        Repository,
+        AppGateway,
+        NotificationService])
+], AppService);
+export { AppService };
+//# sourceMappingURL=app.service.js.map
