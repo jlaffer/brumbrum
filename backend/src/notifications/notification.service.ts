@@ -91,9 +91,9 @@ export class NotificationService {
     try {
       const phone = to.replace(/\+/g, '').replace(/\s/g, '');
       const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(body)}&apikey=${apikey}`;
-      
+
       this.logger.log(`Versende WhatsApp an ${to} via CallMeBot...`);
-      
+
       const response = await fetch(url);
       if (response.ok) {
         this.logger.log(`WhatsApp erfolgreich an ${to} versendet.`);
