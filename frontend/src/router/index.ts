@@ -5,7 +5,7 @@ import MyCarsView from '../views/MyCarsView.vue';
 import NeighborsView from '../views/NeighborsView.vue';
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
