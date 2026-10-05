@@ -298,3 +298,10 @@ code {
 .ant-menu-root li.ant-menu-item-selected  {
   border-radius: 30px !important;
 }
+
+.ant-picker-calendar .ant-picker-cell-selected .ant-picker-calendar-date,
+.ant-picker-calendar .ant-picker-cell-selected .ant-picker-calendar-date-value,
+.ant-picker-calendar .ant-picker-cell-selected .ant-picker-cell-inner {
+  background-color: #dedede !important;
+  color: var(--text-h) !important;
+}

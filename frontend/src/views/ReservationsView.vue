@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { getReservations, updateReservationStatus, completeReservation, getCars, updateReservation, deleteReservation, socket } from '../api/index';
 import { ReservationStatus } from '../types/index';
 import type { Reservation, Car } from '../types/index';
@@ -11,7 +11,9 @@ import {
   CloseCircleOutlined,
   EditOutlined,
   CheckOutlined,
-  DeleteOutlined
+  DeleteOutlined,
+  LeftOutlined,
+  RightOutlined
 } from '@ant-design/icons-vue';
 
 const props = defineProps<{ currentUserId: number | null }>();
@@ -27,12 +29,53 @@ const editForm = ref({
   range: null as [Dayjs, Dayjs] | null,
 });
 const endMileage = ref<number | null>(null);
-const viewMode = ref<'list' | 'calendar'>('list');
+const viewMode = ref<'list' | 'calendar'>(localStorage.getItem('brumbrum_reservations_view_mode') as 'list' | 'calendar' || 'list');
+const calendarDate = ref<Dayjs>(dayjs(localStorage.getItem('brumbrum_reservations_calendar_date') || undefined));
+const storedIds = localStorage.getItem('brumbrum_selected_car_ids_res');
+const selectedCarIds = ref<number[]>(storedIds ? JSON.parse(storedIds) : []);
+const isFirstLoad = ref(!storedIds);
+
+watch(viewMode, (val) => {
+  localStorage.setItem('brumbrum_reservations_view_mode', val);
+});
+
+watch(calendarDate, (val) => {
+  localStorage.setItem('brumbrum_reservations_calendar_date', val.toISOString());
+});
+
+watch(selectedCarIds, (val) => {
+  localStorage.setItem('brumbrum_selected_car_ids_res', JSON.stringify(val));
+}, { deep: true });
 const isDesktop = ref(window.innerWidth > 768);
+const getYearOptions = (value: Dayjs) => {
+  const year = value.year();
+  const years = [];
+  for (let i = year - 10; i <= year + 10; i += 1) {
+    years.push(i);
+  }
+  return years;
+};
+
+const getMonthOptions = () => {
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    months.push(dayjs().month(i).format('MMMM'));
+  }
+  return months;
+};
 
 const updateWidth = () => {
   isDesktop.value = window.innerWidth > 768;
 };
+
+const activeCars = computed(() => cars.value.filter(c => c.isActive));
+
+watch(activeCars, (newCars) => {
+  if (isFirstLoad.value && newCars.length > 0) {
+    selectedCarIds.value = newCars.map(c => c.id);
+    isFirstLoad.value = false;
+  }
+}, { immediate: true });
 
 const fetchReservations = async () => {
   loading.value = true;
@@ -156,16 +199,36 @@ const reservationGroups = computed(() => [
 ].filter(g => g.data.length > 0));
 
 const getListData = (value: Dayjs) => {
+  const day = value.startOf('day');
   return myReservations.value.filter(res => {
-    const day = value.startOf('day');
     const start = dayjs(res.startTime).startOf('day');
     const end = dayjs(res.endTime).startOf('day');
-    return !day.isBefore(start) && !day.isAfter(end) && res.status !== ReservationStatus.REJECTED;
-  }).map(res => ({
-    color: res.user?.color || '#1890ff',
-    status: res.status,
-    content: `${res.car?.licensePlate} reserviert`,
-  }));
+    const isSelectedCar = res.car && selectedCarIds.value.includes(res.car.id);
+    return isSelectedCar && !day.isBefore(start) && !day.isAfter(end) && res.status !== ReservationStatus.REJECTED;
+  }).map(res => {
+    const start = dayjs(res.startTime);
+    const end = dayjs(res.endTime);
+    const isStart = start.isSame(day, 'day');
+    const isEnd = end.isSame(day, 'day');
+    
+    let timeStr = '';
+    if (isStart && isEnd) {
+      timeStr = `${start.format('HH:mm')}-${end.format('HH:mm')} `;
+    } else if (isStart) {
+      timeStr = `ab ${start.format('HH:mm')} `;
+    } else if (isEnd) {
+      timeStr = `bis ${end.format('HH:mm')} `;
+    }
+
+    return {
+      id: res.id,
+      color: res.car?.owner?.color || '#1890ff',
+      status: res.status,
+      content: `${timeStr}${res.car?.licensePlate}`,
+      isStart,
+      isEnd
+    };
+  });
 };
 
 
@@ -329,23 +392,84 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
     </div>
 
     <div v-else class="calendar-container">
-      <a-calendar :fullscreen="isDesktop">
+      <div class="filter-container">
+        <span class="filter-label">Fahrzeuge filtern:</span>
+        <a-checkbox-group v-model:value="selectedCarIds">
+          <a-config-provider
+            v-for="car in activeCars"
+            :key="car.id"
+            :theme="{
+              token: {
+                colorPrimary: car.owner?.color || '#1890ff',
+              }
+            }"
+          >
+            <a-checkbox :value="car.id" :style="{ color: car.owner?.color }">
+              {{ car.licensePlate }}
+            </a-checkbox>
+          </a-config-provider>
+        </a-checkbox-group>
+      </div>
+      <a-calendar v-model:value="calendarDate" :fullscreen="isDesktop">
+        <template #headerRender="{ value, type, onChange, onTypeChange }">
+          <div style="padding: 10px; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+            <a-select
+              size="small"
+              style="width: 100px"
+              :dropdown-match-select-width="false"
+              :value="value.year()"
+              @change="(newYear: number) => onChange(value.year(newYear))"
+            >
+              <a-select-option v-for="val in getYearOptions(value)" :key="val" :value="val">
+                {{ val }}
+              </a-select-option>
+            </a-select>
+
+            <a-select
+              v-if="type === 'month'"
+              size="small"
+              style="width: 120px"
+              :dropdown-match-select-width="false"
+              :value="value.month()"
+              @change="(newMonth: number) => onChange(value.month(newMonth))"
+            >
+              <a-select-option v-for="(month, index) in getMonthOptions()" :key="index" :value="index">
+                {{ month }}
+              </a-select-option>
+            </a-select>
+
+            <a-button size="small" @click="onChange(value.subtract(1, type === 'month' ? 'month' : 'year'))">
+              <template #icon><LeftOutlined /></template>
+            </a-button>
+
+            <a-button size="small" @click="onChange(value.add(1, type === 'month' ? 'month' : 'year'))">
+              <template #icon><RightOutlined /></template>
+            </a-button>
+
+            <a-radio-group :value="type" button-style="solid" size="small" @change="(e: any) => onTypeChange(e.target.value)">
+              <a-radio-button value="month">Monat</a-radio-button>
+              <a-radio-button value="year">Jahr</a-radio-button>
+            </a-radio-group>
+          </div>
+        </template>
         <template #dateCellRender="{ current }">
-          <ul class="events" v-if="isDesktop">
-            <li v-for="item in getListData(current)" :key="item.content">
-              <a-badge :color="item.color">
-                <template #text>
-                  <span style="display: inline-flex; align-items: center; gap: 4px;">
-                    <ClockCircleOutlined v-if="item.status === 'PENDING'" style="color: orange" />
-                    <CheckCircleOutlined v-else-if="item.status === 'APPROVED'" style="color: green" />
-                    <CheckOutlined v-else-if="item.status === 'COMPLETED'" style="color: blue" />
-                    <CloseCircleOutlined v-else-if="item.status === 'REJECTED'" style="color: red" />
-                    {{ item.content }}
-                  </span>
-                </template>
-              </a-badge>
-            </li>
-          </ul>
+          <div class="events-container" v-if="isDesktop">
+            <div 
+              v-for="item in getListData(current)" 
+              :key="item.id" 
+              class="event-item"
+              :class="{ 'event-start': item.isStart, 'event-end': item.isEnd }"
+              :style="{ backgroundColor: item.color + '22', borderLeft: `3px solid ${item.color}` }"
+            >
+              <span class="event-content" :style="{ color: item.color }">
+                <ClockCircleOutlined v-if="item.status === 'PENDING'" />
+                <CheckCircleOutlined v-else-if="item.status === 'APPROVED'" />
+                <CheckOutlined v-else-if="item.status === 'COMPLETED'" />
+                <CloseCircleOutlined v-else-if="item.status === 'REJECTED'" />
+                {{ item.content }}
+              </span>
+            </div>
+          </div>
         </template>
       </a-calendar>
     </div>
@@ -406,19 +530,48 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
   background: white;
   padding: 20px;
   border-radius: 8px;
-  margin-bottom: 24px;
+  text-align: left;
 }
-.events {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.filter-container {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.events :deep(.ant-badge-status) {
+.filter-label {
+  font-weight: 600;
+  color: var(--text-h);
+}
+.events-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.event-item {
+  padding: 2px 4px;
+  font-size: 11px;
   overflow: hidden;
   white-space: nowrap;
-  width: 100%;
   text-overflow: ellipsis;
-  font-size: 12px;
+  border-radius: 2px;
+}
+.event-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+.event-start {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+.event-end {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
 }
 
 @media (max-width: 768px) {
