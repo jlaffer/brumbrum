@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { getUsers, createUser, updateUser, deleteUser, socket } from '../api/index';
 import type { User } from '../types/index';
 import { message, Modal } from 'ant-design-vue';
-import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import { EditOutlined, DeleteOutlined, PlusOutlined, MessageOutlined } from '@ant-design/icons-vue';
 
 const users = ref<User[]>([]);
 const loading = ref(false);
@@ -24,6 +24,12 @@ const columns = [
   { title: 'Farbe', dataIndex: 'color', key: 'color' },
   { title: 'Aktion', key: 'action' },
 ];
+
+const openWhatsApp = (phoneNumber: string) => {
+  if (!phoneNumber) return;
+  const cleanNumber = phoneNumber.replace(/\s+/g, '').replace(/^00/, '').replace(/^\+/, '');
+  window.open(`https://wa.me/${cleanNumber}`, '_blank');
+};
 
 const fetchUsers = async () => {
   loading.value = true;
@@ -110,7 +116,14 @@ onUnmounted(() => {
 
     <a-table :dataSource="users" :columns="columns" :loading="loading" rowKey="id">
       <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'color'">
+        <template v-if="column.key === 'phoneNumber'">
+          <a-button v-if="record.phoneNumber" type="link" size="small" @click="openWhatsApp(record.phoneNumber)">
+            <template #icon><MessageOutlined /></template>
+            {{ record.phoneNumber }}
+          </a-button>
+          <span v-else>-</span>
+        </template>
+        <template v-else-if="column.key === 'color'">
           <div :style="{ backgroundColor: record.color, width: '20px', height: '20px', borderRadius: '4px', border: '1px solid #d9d9d9' }"></div>
         </template>
         <template v-else-if="column.key === 'action'">

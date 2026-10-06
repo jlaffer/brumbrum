@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '../views/HomeView.vue';
+import DashboardView from '../views/DashboardView.vue';
+import CarsView from '../views/CarsView.vue';
 import ReservationsView from '../views/ReservationsView.vue';
 import MyCarsView from '../views/MyCarsView.vue';
 import NeighborsView from '../views/NeighborsView.vue';
@@ -9,8 +10,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      name: 'dashboard',
+      component: DashboardView,
+    },
+    {
+      path: '/cars',
+      name: 'cars',
+      component: CarsView,
     },
     {
       path: '/reservations',

@@ -84,8 +84,11 @@ const onClose = () => {
         :selectedKeys="[$route.name as string]"
         class="desktop-menu"
       >
-        <a-menu-item key="home">
-          <router-link to="/">Fahrzeuge</router-link>
+        <a-menu-item key="dashboard">
+          <router-link to="/">Dashboard</router-link>
+        </a-menu-item>
+        <a-menu-item key="cars">
+          <router-link to="/cars">Fahrzeuge</router-link>
         </a-menu-item>
         <a-menu-item key="reservations">
           <router-link to="/reservations">Reservierungen</router-link>
@@ -139,8 +142,11 @@ const onClose = () => {
         :selectedKeys="[$route.name as string]"
         @click="drawerVisible = false"
       >
-        <a-menu-item key="home">
-          <router-link to="/">Fahrzeuge</router-link>
+        <a-menu-item key="dashboard">
+          <router-link to="/">Dashboard</router-link>
+        </a-menu-item>
+        <a-menu-item key="cars">
+          <router-link to="/cars">Fahrzeuge</router-link>
         </a-menu-item>
         <a-menu-item key="reservations">
           <router-link to="/reservations">Reservierungen</router-link>
