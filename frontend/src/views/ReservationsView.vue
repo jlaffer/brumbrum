@@ -13,7 +13,12 @@ import {
   CheckOutlined,
   DeleteOutlined,
   LeftOutlined,
-  RightOutlined
+  RightOutlined,
+  UserOutlined,
+  CarOutlined,
+  HistoryOutlined,
+  InboxOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons-vue';
 
 const props = defineProps<{ currentUserId: number | null }>();
@@ -34,6 +39,7 @@ const calendarDate = ref<Dayjs>(dayjs(localStorage.getItem('brumbrum_reservation
 const storedIds = localStorage.getItem('brumbrum_selected_car_ids_res');
 const selectedCarIds = ref<number[]>(storedIds ? JSON.parse(storedIds) : []);
 const isFirstLoad = ref(!storedIds);
+const activeTab = ref('upcoming');
 
 watch(viewMode, (val) => {
   localStorage.setItem('brumbrum_reservations_view_mode', val);
@@ -176,31 +182,38 @@ const handleDelete = (id: number) => {
   });
 };
 
-const myReservations = computed(() =>
+const allRelevantReservations = computed(() =>
   reservations.value.filter(r => 
     r.user?.id === props.currentUserId || 
     r.car?.owner?.id === props.currentUserId
   )
 );
 
-const futureReservations = computed(() =>
-  myReservations.value.filter(r => !dayjs(r.endTime).isBefore(dayjs()))
-    .sort((a, b) => dayjs(a.startTime).diff(dayjs(b.startTime)))
+const pendingRequests = computed(() =>
+  reservations.value.filter(r => 
+    r.car?.owner?.id === props.currentUserId && 
+    r.status === ReservationStatus.PENDING
+  )
 );
 
-const pastReservations = computed(() =>
-  myReservations.value.filter(r => dayjs(r.endTime).isBefore(dayjs()))
-    .sort((a, b) => dayjs(b.startTime).diff(dayjs(a.startTime)))
-);
+const upcomingReservations = computed(() => {
+  const now = dayjs();
+  return allRelevantReservations.value.filter(r => 
+    dayjs(r.endTime).isAfter(now) && 
+    !(r.car?.owner?.id === props.currentUserId && r.status === ReservationStatus.PENDING)
+  ).sort((a, b) => dayjs(a.startTime).diff(dayjs(b.startTime)));
+});
 
-const reservationGroups = computed(() => [
-  { title: 'Zukünftige Reservierungen', data: futureReservations.value, key: 'future' },
-  { title: 'Vergangene Reservierungen', data: pastReservations.value, key: 'past' }
-].filter(g => g.data.length > 0));
+const pastReservations = computed(() => {
+  const now = dayjs();
+  return allRelevantReservations.value.filter(r => 
+    dayjs(r.endTime).isBefore(now) || r.status === ReservationStatus.COMPLETED
+  ).sort((a, b) => dayjs(b.startTime).diff(dayjs(a.startTime)));
+});
 
 const getListData = (value: Dayjs) => {
   const day = value.startOf('day');
-  return myReservations.value.filter(res => {
+  return allRelevantReservations.value.filter(res => {
     const start = dayjs(res.startTime).startOf('day');
     const end = dayjs(res.endTime).startOf('day');
     const isSelectedCar = res.car && selectedCarIds.value.includes(res.car.id);
@@ -232,16 +245,27 @@ const getListData = (value: Dayjs) => {
 };
 
 
-const columns = [
-  { title: 'Fahrzeug', dataIndex: ['car', 'brand'], key: 'car' },
-  { title: 'Nutzer', key: 'user' },
-  { title: 'Von', dataIndex: 'startTime', key: 'start' },
-  { title: 'Bis', dataIndex: 'endTime', key: 'end' },
-  { title: 'Status', dataIndex: 'status', key: 'status' },
-  { title: 'Aktion', key: 'action' },
-];
-
 const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'APPROVED': return 'green';
+    case 'PENDING': return 'orange';
+    case 'COMPLETED': return 'blue';
+    case 'REJECTED': return 'red';
+    default: return 'default';
+  }
+};
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'APPROVED': return 'Bestätigt';
+    case 'PENDING': return 'Ausstehend';
+    case 'COMPLETED': return 'Abgeschlossen';
+    case 'REJECTED': return 'Abgelehnt';
+    default: return status;
+  }
+};
 </script>
 
 <template>
@@ -255,140 +279,172 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
     </div>
 
     <div v-if="viewMode === 'list'">
-      <div v-for="group in reservationGroups" :key="group.key" class="reservation-group">
-        <h3 :class="['group-title', { 'past-title': group.key === 'past' }]">{{ group.title }}</h3>
+      <a-tabs v-model:activeKey="activeTab" class="reservation-tabs">
+        <a-tab-pane key="upcoming">
+          <template #tab>
+            <span><ClockCircleOutlined /> Geplante Fahrten</span>
+          </template>
+          <div class="tab-content">
+            <a-list :dataSource="upcomingReservations" :loading="loading" :locale="{ emptyText: 'Keine geplanten Fahrten' }">
+              <template #renderItem="{ item }">
+                <a-list-item>
+                  <a-card class="res-card" :hoverable="true">
+                    <div class="res-card-header">
+                      <div class="car-details">
+                        <CarOutlined class="icon-main" />
+                        <div>
+                          <div class="car-name">{{ item.car?.brand }} {{ item.car?.model }}</div>
+                          <a-tag color="blue" size="small">{{ item.car?.licensePlate }}</a-tag>
+                          <a-tag v-if="item.car?.owner?.id === currentUserId" size="small" color="orange">Mein Auto</a-tag>
+                        </div>
+                      </div>
+                      <a-tag :color="getStatusColor(item.status)" class="status-tag">
+                        {{ getStatusLabel(item.status) }}
+                      </a-tag>
+                    </div>
 
-        <div v-if="isDesktop">
-          <a-table :dataSource="group.data" :columns="columns" :loading="loading" rowKey="id">
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'car'">
-                <div>{{ record.car?.brand }} {{ record.car?.model }} ({{ record.car?.licensePlate }})</div>
-                <a-tag v-if="record.car?.owner?.id === currentUserId" size="small" style="margin-top: 4px">Mein Auto</a-tag>
-                <a-tag v-else size="small" :color="record.car?.owner?.color" style="margin-top: 4px">
-                  Besitzer: {{ record.car?.owner?.name }}
-                </a-tag>
-              </template>
-              <template v-else-if="column.key === 'user'">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <div :style="{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: record.user?.color }"></div>
-                  {{ record.user?.name }}
-                </div>
-              </template>
-              <template v-else-if="column.key === 'start'">
-                {{ formatDate(record.startTime) }}
-              </template>
-              <template v-else-if="column.key === 'end'">
-                {{ formatDate(record.endTime) }}
-              </template>
-              <template v-else-if="column.key === 'status'">
-                <a-tag :color="record.status === 'APPROVED' ? 'green' : record.status === 'PENDING' ? 'orange' : record.status === 'COMPLETED' ? 'blue' : 'red'">
-                  {{ record.status }}
-                </a-tag>
-              </template>
-              <template v-else-if="column.key === 'action'">
-                <a-space>
-                  <!-- Aktionen für den Buchenden -->
-                  <template v-if="record.user?.id === currentUserId">
-                    <a-button
-                      v-if="record.status === 'APPROVED' && dayjs().isAfter(dayjs(record.startTime))"
-                      type="primary"
-                      size="small"
-                      @click="openMileageModal(record)"
-                    >
-                      Fahrt beenden
-                    </a-button>
-                    <a-button
-                      v-if="record.status === 'PENDING' || record.status === 'APPROVED'"
-                      size="small"
-                      @click="openEditModal(record)"
-                    >
-                      <template #icon><EditOutlined /></template>
-                    </a-button>
-                    <a-button
-                      danger
-                      size="small"
-                      @click="handleDelete(record.id)"
-                    >
-                      <template #icon><DeleteOutlined /></template>
-                    </a-button>
-                  </template>
+                    <div class="res-card-body">
+                      <div class="info-row">
+                        <ClockCircleOutlined />
+                        <span>{{ formatDate(item.startTime) }} — {{ formatDate(item.endTime) }}</span>
+                      </div>
+                      <div class="info-row">
+                        <UserOutlined />
+                        <span v-if="item.user?.id === currentUserId">Ich</span>
+                        <span v-else>{{ item.user?.name }}</span>
+                        <span v-if="item.car?.owner?.id !== currentUserId && item.user?.id === currentUserId" class="owner-info">
+                          (Besitzer: {{ item.car?.owner?.name }})
+                        </span>
+                      </div>
+                    </div>
 
-                  <!-- Aktionen für den Autobesitzer -->
-                  <template v-if="record.car?.owner?.id === currentUserId && record.status === 'PENDING'">
-                    <a-button type="primary" size="small" @click="handleStatus(record.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
-                    <a-button danger size="small" @click="handleStatus(record.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
-                  </template>
-                </a-space>
+                    <div class="res-card-actions">
+                      <a-space wrap>
+                        <!-- Aktionen für den Buchenden -->
+                        <template v-if="item.user?.id === currentUserId">
+                          <a-button
+                            v-if="item.status === 'APPROVED' && dayjs().isAfter(dayjs(item.startTime))"
+                            type="primary"
+                            @click="openMileageModal(item)"
+                          >
+                            Fahrt beenden
+                          </a-button>
+                          <a-button
+                            v-if="item.status === 'PENDING' || item.status === 'APPROVED'"
+                            @click="openEditModal(item)"
+                          >
+                            <template #icon><EditOutlined /></template> Bearbeiten
+                          </a-button>
+                          <a-button
+                            danger
+                            @click="handleDelete(item.id)"
+                          >
+                            <template #icon><DeleteOutlined /></template> Stornieren
+                          </a-button>
+                        </template>
+
+                        <!-- Aktionen für den Autobesitzer -->
+                        <template v-if="item.car?.owner?.id === currentUserId && item.status === 'PENDING'">
+                          <a-button type="primary" @click="handleStatus(item.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
+                          <a-button danger @click="handleStatus(item.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
+                        </template>
+                      </a-space>
+                    </div>
+                  </a-card>
+                </a-list-item>
               </template>
-            </template>
-          </a-table>
-        </div>
+            </a-list>
+          </div>
+        </a-tab-pane>
 
-        <div v-else>
-          <a-list :dataSource="group.data" :loading="loading">
-            <template #renderItem="{ item }">
-              <a-list-item>
-                <a-card
-                  style="width: 100%"
-                  :title="item.car?.brand + ' ' + item.car?.model"
-                  :class="{ 'past-card': group.key === 'past' }"
-                >
-                  <template #extra>
-                    <a-tag :color="item.status === 'APPROVED' ? 'green' : item.status === 'PENDING' ? 'orange' : item.status === 'COMPLETED' ? 'blue' : 'red'">
-                      {{ item.status }}
-                    </a-tag>
-                  </template>
-                  <p>
-                    <strong>Nutzer:</strong> {{ item.user?.name }}
-                    <a-tag v-if="item.car?.owner?.id === currentUserId" size="small" style="margin-left: 4px">Mein Auto</a-tag>
-                    <a-tag v-else size="small" :color="item.car?.owner?.color" style="margin-left: 4px">
-                      Besitzer: {{ item.car?.owner?.name }}
-                    </a-tag>
-                  </p>
-                  <p><strong>Zeitraum:</strong> {{ formatDate(item.startTime) }} - {{ formatDate(item.endTime) }}</p>
-                  <a-space direction="vertical" style="width: 100%">
-                    <!-- Aktionen für den Buchenden -->
-                    <template v-if="item.user?.id === currentUserId">
-                      <a-button
-                        v-if="item.status === 'APPROVED' && dayjs().isAfter(dayjs(item.startTime))"
-                        type="primary"
-                        block
-                        @click="openMileageModal(item)"
-                      >
-                        Fahrt beenden
-                      </a-button>
-                      <a-button
-                        v-if="item.status === 'PENDING' || item.status === 'APPROVED'"
-                        block
-                        @click="openEditModal(item)"
-                      >
-                        <template #icon><EditOutlined /></template>
-                        Bearbeiten
-                      </a-button>
-                      <a-button
-                        danger
-                        block
-                        @click="handleDelete(item.id)"
-                      >
-                        <template #icon><DeleteOutlined /></template>
-                        Löschen
-                      </a-button>
-                    </template>
+        <a-tab-pane key="pending" v-if="pendingRequests.length > 0">
+          <template #tab>
+            <a-badge :count="pendingRequests.length" :offset="[10, 0]">
+              <span><InboxOutlined /> Anfragen</span>
+            </a-badge>
+          </template>
+          <div class="tab-content">
+            <a-alert
+              message="Nachbarn möchten deine Autos leihen"
+              type="info"
+              show-icon
+              style="margin-bottom: 16px"
+            >
+              <template #icon><InfoCircleOutlined /></template>
+            </a-alert>
+            <a-list :dataSource="pendingRequests" :loading="loading">
+              <template #renderItem="{ item }">
+                <a-list-item>
+                  <a-card class="res-card pending-card">
+                    <div class="res-card-header">
+                      <div class="car-details">
+                        <CarOutlined class="icon-main" />
+                        <div>
+                          <div class="car-name">{{ item.car?.brand }} {{ item.car?.model }}</div>
+                          <a-tag color="blue" size="small">{{ item.car?.licensePlate }}</a-tag>
+                        </div>
+                      </div>
+                      <a-tag color="orange">ANFRAGE</a-tag>
+                    </div>
+                    <div class="res-card-body">
+                      <div class="info-row">
+                        <UserOutlined />
+                        <span><strong>{{ item.user?.name }}</strong> möchte dein Auto leihen</span>
+                      </div>
+                      <div class="info-row">
+                        <ClockCircleOutlined />
+                        <span>{{ formatDate(item.startTime) }} — {{ formatDate(item.endTime) }}</span>
+                      </div>
+                    </div>
+                    <div class="res-card-actions">
+                      <a-button type="primary" @click="handleStatus(item.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
+                      <a-button danger style="margin-left: 8px" @click="handleStatus(item.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
+                    </div>
+                  </a-card>
+                </a-list-item>
+              </template>
+            </a-list>
+          </div>
+        </a-tab-pane>
 
-                    <!-- Aktionen für den Autobesitzer -->
-                    <template v-if="item.car?.owner?.id === currentUserId && item.status === 'PENDING'">
-                      <a-button type="primary" block @click="handleStatus(item.id, ReservationStatus.APPROVED)">Bestätigen</a-button>
-                      <a-button danger block @click="handleStatus(item.id, ReservationStatus.REJECTED)">Ablehnen</a-button>
-                    </template>
-                  </a-space>
-                </a-card>
-              </a-list-item>
-            </template>
-          </a-list>
-        </div>
-      </div>
-
-      <a-empty v-if="myReservations.length === 0" description="Keine Reservierungen vorhanden" />
+        <a-tab-pane key="history">
+          <template #tab>
+            <span><HistoryOutlined /> Verlauf</span>
+          </template>
+          <div class="tab-content">
+            <a-list :dataSource="pastReservations" :loading="loading" :locale="{ emptyText: 'Kein Verlauf vorhanden' }">
+              <template #renderItem="{ item }">
+                <a-list-item>
+                  <a-card class="res-card past-card">
+                    <div class="res-card-header">
+                      <div class="car-details">
+                        <CarOutlined class="icon-main" style="color: #8c8c8c" />
+                        <div>
+                          <div class="car-name" style="color: #8c8c8c">{{ item.car?.brand }} {{ item.car?.model }}</div>
+                          <a-tag size="small">{{ item.car?.licensePlate }}</a-tag>
+                        </div>
+                      </div>
+                      <a-tag :color="getStatusColor(item.status)">
+                        {{ getStatusLabel(item.status) }}
+                      </a-tag>
+                    </div>
+                    <div class="res-card-body">
+                      <div class="info-row" style="color: #8c8c8c">
+                        <ClockCircleOutlined />
+                        <span>{{ formatDate(item.startTime) }} — {{ formatDate(item.endTime) }}</span>
+                      </div>
+                      <div class="info-row" style="color: #8c8c8c">
+                        <UserOutlined />
+                        <span>{{ item.user?.id === currentUserId ? 'Ich' : item.user?.name }}</span>
+                      </div>
+                    </div>
+                  </a-card>
+                </a-list-item>
+              </template>
+            </a-list>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
     </div>
 
     <div v-else class="calendar-container">
@@ -508,23 +564,84 @@ const formatDate = (date: string) => dayjs(date).format('DD.MM.YYYY HH:mm');
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 24px;
+}
+
+.reservation-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 24px;
+}
+
+.tab-content {
+  padding: 4px;
+}
+
+.res-card {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.res-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.res-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 16px;
 }
-.reservation-group {
-  margin-bottom: 32px;
+
+.car-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.group-title {
-  margin-bottom: 16px;
-  padding-left: 8px;
-  border-left: 4px solid #1890ff;
+
+.icon-main {
+  font-size: 28px;
+  color: #1890ff;
 }
-.past-title {
-  border-left-color: #d9d9d9;
+
+.car-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.res-card-body {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.owner-info {
+  font-size: 13px;
   color: #8c8c8c;
+  margin-left: 4px;
 }
+
+.res-card-actions {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.pending-card {
+  border-left: 4px solid #faad14;
+}
+
 .past-card {
-  opacity: 0.8;
   background-color: #fafafa;
+  opacity: 0.8;
 }
 .calendar-container {
   background: white;
