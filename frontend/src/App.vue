@@ -85,10 +85,10 @@ const onClose = () => {
         class="desktop-menu"
       >
         <a-menu-item key="dashboard">
-          <router-link to="/">Dashboard</router-link>
+          <router-link to="/">Übersicht</router-link>
         </a-menu-item>
         <a-menu-item key="cars">
-          <router-link to="/cars">Fahrzeuge</router-link>
+          <router-link to="/cars">Fahrzeugübersicht</router-link>
         </a-menu-item>
         <a-menu-item key="reservations">
           <router-link to="/reservations">Reservierungen</router-link>
@@ -143,10 +143,10 @@ const onClose = () => {
         @click="drawerVisible = false"
       >
         <a-menu-item key="dashboard">
-          <router-link to="/">Dashboard</router-link>
+          <router-link to="/">Übersicht</router-link>
         </a-menu-item>
         <a-menu-item key="cars">
-          <router-link to="/cars">Fahrzeuge</router-link>
+          <router-link to="/cars">Fahrzeugübersicht</router-link>
         </a-menu-item>
         <a-menu-item key="reservations">
           <router-link to="/reservations">Reservierungen</router-link>
