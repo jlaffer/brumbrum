@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const API_URL = 'http://2.28.6.169/brumbrum/api/v1';
+const API_URL = '/api/v1';
 
 export const api = axios.create({
   baseURL: API_URL,
